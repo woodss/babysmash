@@ -79,49 +79,54 @@ namespace BabySmash
 
       public void Launch()
       {
-         timer.Tick += new EventHandler(timer_Tick);
-         timer.Interval = new TimeSpan(0, 0, 1);
-         int Number = 0;
-
-         if (ApplicationDeployment.IsNetworkDeployed)
+         var alreadyRunning = System.Diagnostics.Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(System.Reflection.Assembly.GetEntryAssembly().Location)).Length > 1;
+         if (!alreadyRunning)
          {
-            deployment = ApplicationDeployment.CurrentDeployment;
-            deployment.UpdateCompleted += new System.ComponentModel.AsyncCompletedEventHandler(deployment_UpdateCompleted);
-            deployment.UpdateProgressChanged += deployment_UpdateProgressChanged;
-            deployment.CheckForUpdateCompleted += deployment_CheckForUpdateCompleted;
-            try
-            {
-               deployment.CheckForUpdateAsync();
-            }
-            catch (InvalidOperationException e)
-            {
-               Debug.WriteLine(e.ToString());
-            }
-         }
-
-         foreach (WinForms.Screen s in WinForms.Screen.AllScreens)
-         {
-            MainWindow m = new MainWindow(this)
-                               {
-                                  WindowStartupLocation = WindowStartupLocation.Manual,
-                                  Left = s.WorkingArea.Left,
-                                  Top = s.WorkingArea.Top,
-                                  Width = s.WorkingArea.Width,
-                                  Height = s.WorkingArea.Height,
-                                  WindowStyle = WindowStyle.None,
-                                  Topmost = true,
-                                  AllowsTransparency = Settings.Default.TransparentBackground,
-	                          Background = (Settings.Default.TransparentBackground ? new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) : Brushes.WhiteSmoke),
-                                  Name = "Window" + Number++.ToString()
- 				};
+             timer.Tick += new EventHandler(timer_Tick);
+             timer.Interval = new TimeSpan(0, 0, 1);
+             int Number = 0;
 
 
 
-            ellipsesUserControlQueue[m.Name] = new Queue<UserControl>();
+             if (ApplicationDeployment.IsNetworkDeployed)
+             {
+                 deployment = ApplicationDeployment.CurrentDeployment;
+                 deployment.UpdateCompleted += new System.ComponentModel.AsyncCompletedEventHandler(deployment_UpdateCompleted);
+                 deployment.UpdateProgressChanged += deployment_UpdateProgressChanged;
+                 deployment.CheckForUpdateCompleted += deployment_CheckForUpdateCompleted;
+                 try
+                 {
+                     deployment.CheckForUpdateAsync();
+                 }
+                 catch (InvalidOperationException e)
+                 {
+                     Debug.WriteLine(e.ToString());
+                 }
+             }
 
-            m.Show();
-            m.MouseLeftButtonDown += HandleMouseLeftButtonDown;
-            m.MouseWheel += HandleMouseWheel;
+             foreach (WinForms.Screen s in WinForms.Screen.AllScreens)
+             {
+                 MainWindow m = new MainWindow(this)
+                                    {
+                                        WindowStartupLocation = WindowStartupLocation.Manual,
+                                        Left = s.WorkingArea.Left,
+                                        Top = s.WorkingArea.Top,
+                                        Width = s.WorkingArea.Width,
+                                        Height = s.WorkingArea.Height,
+                                        WindowStyle = WindowStyle.None,
+                                        Topmost = true,
+                                        AllowsTransparency = Settings.Default.TransparentBackground,
+                                        Background = (Settings.Default.TransparentBackground ? new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) : Brushes.WhiteSmoke),
+                                        Name = "Window" + Number++.ToString()
+                                    };
+
+
+
+                 ellipsesUserControlQueue[m.Name] = new Queue<UserControl>();
+
+                 m.Show();
+                 m.MouseLeftButtonDown += HandleMouseLeftButtonDown;
+                 m.MouseWheel += HandleMouseWheel;
 
 #if false
             m.Width = 700;
@@ -129,46 +134,38 @@ namespace BabySmash
             m.Left = 900;
             m.Top = 500;
 #else
-            m.WindowState = WindowState.Maximized;
+                 m.WindowState = WindowState.Maximized;
 #endif
-            windows.Add(m);
-         }
+                 windows.Add(m);
+             }
 
-	    //Only show the info label on the FIRST monitor.
-         windows[0].infoLabel.Visibility = Visibility.Visible;
+             //Only show the info label on the FIRST monitor.
+             windows[0].infoLabel.Visibility = Visibility.Visible;
 
-         //Startup sound
-         audio.PlayWavResourceYield(".Resources.Sounds." + "EditedJackPlaysBabySmash.wav");
+             //Startup sound
+             audio.PlayWavResourceYield(".Resources.Sounds." + "EditedJackPlaysBabySmash.wav");
 
-         string[] args = Environment.GetCommandLineArgs();
-         string ext = System.IO.Path.GetExtension(System.Reflection.Assembly.GetExecutingAssembly().CodeBase);
+             string[] args = Environment.GetCommandLineArgs();
+             string ext = System.IO.Path.GetExtension(System.Reflection.Assembly.GetExecutingAssembly().CodeBase);
 
-         if (ApplicationDeployment.IsNetworkDeployed && (ApplicationDeployment.CurrentDeployment.IsFirstRun || ApplicationDeployment.CurrentDeployment.UpdatedVersion != ApplicationDeployment.CurrentDeployment.CurrentVersion))            
-         {
-            //if someone made us a screensaver, then don't show the options dialog.
-            if ((args != null && args[0] != "/s") && String.CompareOrdinal(ext, ".SCR") != 0)
-            {
-               ShowOptionsDialog();
-            }
-         }
+             if (ApplicationDeployment.IsNetworkDeployed && (ApplicationDeployment.CurrentDeployment.IsFirstRun || ApplicationDeployment.CurrentDeployment.UpdatedVersion != ApplicationDeployment.CurrentDeployment.CurrentVersion))
+             {
+                 //if someone made us a screensaver, then don't show the options dialog.
+                 if ((args != null && args[0] != "/s") && String.CompareOrdinal(ext, ".SCR") != 0)
+                 {
+                     ShowOptionsDialog();
+                 }
+             }
 #if !false
-         timer.Start();
+             timer.Start();
 #endif
-      }
-
-      void timer_Tick(object sender, EventArgs e)
-      {
-         if (isOptionsDialogShown) return;
-
-         try
-         {
-            IntPtr windowHandle = new WindowInteropHelper(Application.Current.MainWindow).Handle;
-            SetForegroundWindow(windowHandle);
-            SetFocus(windowHandle);
          }
-         catch (Exception)
+         else
          {
-            //Wish me luck!
+             // Program is already running, kill this instance.
+             MessageBox.Show("BabySmash is already running on this computer", "Whoops!", MessageBoxButton.OK, MessageBoxImage.Error);
+             Environment.Exit(-1);
+             // TODO: Perhaps don't just exit, but switch to the process instead?
          }
       }
 
